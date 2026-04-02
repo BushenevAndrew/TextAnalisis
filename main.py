@@ -346,6 +346,7 @@ class TextAnalyzerGUI:
         self.root.mainloop()
 
 
+# now it should work
 if __name__ == "__main__":
     app = TextAnalyzerGUI()
     app.run()
