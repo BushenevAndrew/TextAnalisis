@@ -1,46 +1,51 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
-from tkinterdnd2 import DND_FILES, TkinterDnD
+from tkinterdnd2 import DND_FILES, TkinterDnD  # Поддержка Drag & Drop
 import os
 from pathlib import Path
 import json
 
-from TextAnalyst import TextAnalyzer
+from TextAnalyst import TextAnalyzer  # Класс для анализа текста
 
 
+# Графический интерфейс для анализа текстовых файлов.
 class TextAnalyzerGUI:
+    # Инициализация графического интерфейса.
     def __init__(self):
-        self.root = TkinterDnD.Tk()
+        self.root = TkinterDnD.Tk()  # Используем TkinterDnD для поддержки Drag & Drop
         self.root.title("Анализатор текста")
         self.root.geometry("1200x700")
 
-        self.setup_styles()
+        self.setup_styles()  # Настройка стилей интерфейса
 
-        self.analyzer = None
-        self.current_file = None
+        self.analyzer = None  # Экземпляр анализатора текста
+        self.current_file = None  # Текущий загруженный файл
 
-        self.setup_ui()
+        self.setup_ui()  # Настройка элементов интерфейса
 
 
+    # Настройка стилей для элементов интерфейса.
     def setup_styles(self):
-        """Настройка стилей"""
         style = ttk.Style()
-        style.theme_use('clam')
+        style.theme_use('clam')  # Используем стиль 'clam' для более современного вида
 
-        self.root.configure(bg='#f5f5f5')
+        self.root.configure(bg='#f5f5f5')  # Цвет фона окна
 
+        # Стиль для акцентной кнопки
         style.configure('Accent.TButton', background='#4CAF50', foreground='white')
-        style.map('Accent.TButton',
-                  background=[('active', '#45a049'), ('pressed', '#3d8b40')])
+        style.map('Accent.TButton', background=[('active', '#45a049'), ('pressed', '#3d8b40')])
 
 
+    # Создание и расположение элементов интерфейса.
     def setup_ui(self):
-        main_container = ttk.Frame(self.root)
+        main_container = ttk.Frame(self.root)  # Основной контейнер
         main_container.pack(fill='both', expand=True, padx=10, pady=10)
 
+        # Панель с кнопками управления
         button_frame = ttk.Frame(main_container)
         button_frame.pack(fill='x', pady=(0, 10))
 
+        # Кнопки
         self.select_btn = ttk.Button(button_frame, text="📂 Выбрать файл", command=self.select_file, style='Accent.TButton')
         self.select_btn.pack(side='left', padx=5)
         self.analyze_btn = ttk.Button(button_frame, text="🔍 Выполнить анализ", command=self.analyze_text, state='disabled')
@@ -50,12 +55,15 @@ class TextAnalyzerGUI:
         self.clear_btn = ttk.Button(button_frame, text="🗑️ Очистить", command=self.clear_all)
         self.clear_btn.pack(side='left', padx=5)
 
+        # Разделитель для разделения интерфейса на две части
         paned = ttk.PanedWindow(main_container, orient='horizontal')
         paned.pack(fill='both', expand=True)
 
+        # Левая панель
         left_frame = ttk.Frame(paned)
         paned.add(left_frame, weight=1)
 
+        # Область для Drag & Drop
         drop_frame = ttk.LabelFrame(left_frame, text="Drag & Drop", padding=10)
         drop_frame.pack(fill='x', pady=(0, 10))
 
@@ -68,29 +76,34 @@ class TextAnalyzerGUI:
                                    font=('Arial', 10))
         self.drop_label.pack(fill='both', expand=True)
 
+        # Настройка Drag & Drop
         self.drop_label.drop_target_register(DND_FILES)
         self.drop_label.dnd_bind('<<Drop>>', self.on_drop)
         self.drop_label.dnd_bind('<<DragEnter>>', self.on_drag_enter)
         self.drop_label.dnd_bind('<<DragLeave>>', self.on_drag_leave)
 
+        # Информация о файле
         info_frame = ttk.LabelFrame(left_frame, text="Информация о файле", padding=5)
         info_frame.pack(fill='x', pady=(0, 10))
 
         self.file_info = tk.Text(info_frame, height=8, width=30, wrap='word', bg='#f8f9fa', font=('Courier', 9))
         self.file_info.pack(fill='both', expand=True, padx=5, pady=5)
-        self.file_info.config(state='disabled')
+        self.file_info.config(state='disabled')  # Только для чтения
 
+        # Панель выбора фильтров
         filters_frame = ttk.LabelFrame(left_frame, text="Фильтры анализа", padding=5)
         filters_frame.pack(fill='x')
 
-        self.filter_var = tk.StringVar(value="all")
+        self.filter_var = tk.StringVar(value="all")  # Значение по умолчанию: анализировать всё
         ttk.Radiobutton(filters_frame, text="Все категории", variable=self.filter_var, value="all").pack(anchor='w', padx=5, pady=2)
         ttk.Radiobutton(filters_frame, text="Только буквы", variable=self.filter_var, value="letters").pack(anchor='w', padx=5, pady=2)
         ttk.Radiobutton(filters_frame, text="Только слова", variable=self.filter_var, value="words").pack(anchor='w', padx=5, pady=2)
 
+        # Правая панель (вкладки с результатами)
         right_notebook = ttk.Notebook(paned)
         paned.add(right_notebook, weight=3)
 
+        # Вкладка с результатами анализа
         results_frame = ttk.Frame(right_notebook)
         right_notebook.add(results_frame, text="📊 Результаты анализа")
 
@@ -104,51 +117,57 @@ class TextAnalyzerGUI:
         self.results_tree.pack(side='left', fill='both', expand=True)
         tree_scroll.pack(side='right', fill='y')
 
+        # Вкладка с содержимым файла
         text_frame = ttk.Frame(right_notebook)
         right_notebook.add(text_frame, text="📄 Содержимое файла")
 
         self.text_display = scrolledtext.ScrolledText(text_frame, wrap='word', font=('Courier', 10))
         self.text_display.pack(fill='both', expand=True)
 
+        # Строка состояния
         self.status_bar = ttk.Label(self.root, text="Готов к работе. Перетащите файл или выберите его.", relief='sunken', anchor='w')
         self.status_bar.pack(side='bottom', fill='x')
 
 
+    # Обработчик события Drop (перетаскивание файла).
     def on_drop(self, event):
         file_path = event.data
         if file_path.startswith('{') and file_path.endswith('}'):
-            file_path = file_path[1:-1]
+            file_path = file_path[1:-1]  # Удаляем фигурные скобки, которые добавляет TkinterDnD
         self.load_file(file_path)
         self.drop_label.config(bg='#f8f9fa')
         return 'break'
 
-
+    # Обработчик события DragEnter (перетаскивание файла в область).
     def on_drag_enter(self, event):
         self.drop_label.config(bg='#e8f5e9', text="📂 Отпустите файл для загрузки")
         return 'break'
 
-
+    # Обработчик события DragLeave (выход файла из области).
     def on_drag_leave(self, event):
         self.drop_label.config(bg='#f8f9fa', text="📁 Перетащите текстовый файл сюда\n\nили нажмите кнопку 'Выбрать файл'")
         return 'break'
 
 
+    # Получение активных фильтров анализа.
     def get_active_filters(self):
         filter_value = self.filter_var.get()
         if filter_value == "all":
-            return None
+            return None  # Анализировать всё
         elif filter_value == "letters":
-            return ["letters"]
+            return ["letters"]  # Анализировать только буквы
         elif filter_value == "words":
-            return ["words"]
+            return ["words"]  # Анализировать только слова
         return None
 
 
+    # Загрузка файла и отображение информации о нём.
     def load_file(self, file_path):
         try:
             self.current_file = file_path
-            self.analyzer = TextAnalyzer(file_path)
+            self.analyzer = TextAnalyzer(file_path)  # Создаём анализатор текста
 
+            # Отображаем информацию о файле
             self.file_info.config(state='normal')
             self.file_info.delete(1.0, tk.END)
 
@@ -166,14 +185,15 @@ class TextAnalyzerGUI:
             self.file_info.insert(1.0, file_info_text)
             self.file_info.config(state='disabled')
 
+            # Отображаем содержимое файла (первые 5000 символов)
             self.text_display.delete(1.0, tk.END)
             preview_text = self.analyzer.text[:5000]
             self.text_display.insert(1.0, preview_text)
 
             if len(self.analyzer.text) > 5000:
-                self.text_display.insert(tk.END,
-                                         f"\n\n... (показано только первые 5000 символов из {len(self.analyzer.text)})")
+                self.text_display.insert(tk.END, f"\n\n... (показано только первые 5000 символов из {len(self.analyzer.text)})")
 
+            # Активируем кнопки после загрузки файла
             self.analyze_btn.config(state='normal')
             self.save_btn.config(state='disabled')
             self.update_status(f"Файл загружен: {Path(file_path).name}")
@@ -186,6 +206,7 @@ class TextAnalyzerGUI:
             self.update_status("Ошибка загрузки файла")
 
 
+    # Открытие диалога выбора файла.
     def select_file(self):
         file_path = filedialog.askopenfilename(
             title="Выберите текстовый файл",
@@ -195,6 +216,7 @@ class TextAnalyzerGUI:
             self.load_file(file_path)
 
 
+    # Выполнение анализа текста.
     def analyze_text(self):
         if not self.analyzer:
             messagebox.showwarning("Предупреждение", "Сначала загрузите файл")
@@ -205,11 +227,11 @@ class TextAnalyzerGUI:
             self.update_status("Выполняется анализ текста...")
             self.root.update()
 
-            stats = self.analyzer.analyze(filters=filters)
+            stats = self.analyzer.analyze(filters=filters)  # Выполняем анализ
 
-            self.display_results(stats)
+            self.display_results(stats)  # Отображаем результаты
 
-            self.save_btn.config(state='normal')
+            self.save_btn.config(state='normal')  # Активируем кнопку сохранения
             self.update_status("Анализ завершен")
 
         except Exception as e:
@@ -217,10 +239,12 @@ class TextAnalyzerGUI:
             self.update_status("Ошибка анализа")
 
 
+    # Отображение результатов анализа.
     def display_results(self, stats):
         for item in self.results_tree.get_children():
-            self.results_tree.delete(item)
+            self.results_tree.delete(item)  # Очищаем результаты
 
+        # Общая статистика
         if "general_stats" in stats:
             general_item = self.results_tree.insert('', 'end', text="📊 Общая статистика", open=True)
             for key, value in stats["general_stats"].items():
@@ -232,69 +256,52 @@ class TextAnalyzerGUI:
                     key_name = key
                 self.results_tree.insert(general_item, 'end', text=key_name, values=(str(value),))
 
+        # Статистика букв
         if "letters_stats" in stats:
             if "error" in stats["letters_stats"]:
-                self.results_tree.insert('', 'end', text="🔤 Статистика букв",
-                                        values=(stats["letters_stats"]["error"],))
+                self.results_tree.insert('', 'end', text="🔤 Статистика букв", values=(stats["letters_stats"]["error"],))
             else:
                 letters_item = self.results_tree.insert('', 'end', text="🔤 Статистика букв", open=True)
                 for key, value in stats["letters_stats"].items():
                     if key == "often":
-                        self.results_tree.insert(letters_item, 'end',
-                                                 text="Самая частая буква",
-                                                 values=(f"{value[0]} ({value[1]} раз)",))
+                        self.results_tree.insert(letters_item, 'end', text="Самая частая буква", values=(f"{value[0]} ({value[1]} раз)",))
                     elif key == "rare":
-                        self.results_tree.insert(letters_item, 'end',
-                                                 text="Самая редкая буква",
-                                                 values=(f"{value[0]} ({value[1]} раз)",))
+                        self.results_tree.insert(letters_item, 'end', text="Самая редкая буква", values=(f"{value[0]} ({value[1]} раз)",))
                     elif key == "median":
-                        self.results_tree.insert(letters_item, 'end',
-                                                 text="Медианная буква",
-                                                 values=(f"{value[0]} ({value[1]} раз)",))
+                        self.results_tree.insert(letters_item, 'end', text="Медианная буква", values=(f"{value[0]} ({value[1]} раз)",))
                     elif key == "different_letter":
-                        self.results_tree.insert(letters_item, 'end',
-                                                 text="Различных букв",
-                                                 values=(str(value),))
+                        self.results_tree.insert(letters_item, 'end', text="Различных букв", values=(str(value),))
                     else:
                         self.results_tree.insert(letters_item, 'end', text=key, values=(str(value),))
 
+        # Статистика слов
         if "words_stats" in stats:
             if "error" in stats["words_stats"]:
-                self.results_tree.insert('', 'end', text="📝 Статистика слов",
-                                        values=(stats["words_stats"]["error"],))
+                self.results_tree.insert('', 'end', text="📝 Статистика слов", values=(stats["words_stats"]["error"],))
             else:
                 words_item = self.results_tree.insert('', 'end', text="📝 Статистика слов", open=True)
                 for key, value in stats["words_stats"].items():
                     if key == "min_count":
-                        self.results_tree.insert(words_item, 'end',
-                                                 text="Минимальное вхождение",
-                                                 values=(str(value),))
+                        self.results_tree.insert(words_item, 'end', text="Минимальное вхождение", values=(str(value),))
                     elif key == "max_count":
-                        self.results_tree.insert(words_item, 'end',
-                                                 text="Максимальное вхождение",
-                                                 values=(str(value),))
+                        self.results_tree.insert(words_item, 'end', text="Максимальное вхождение", values=(str(value),))
                     elif key == "words_with_min_count":
                         words_str = ", ".join(value[:5])
                         if len(value) > 5:
                             words_str += "..."
-                        self.results_tree.insert(words_item, 'end',
-                                                 text="Слова с минимальным кол-вом",
-                                                 values=(words_str,))
+                        self.results_tree.insert(words_item, 'end', text="Слова с минимальным кол-вом", values=(words_str,))
                     elif key == "words_with_max_count":
                         words_str = ", ".join(value[:5])
                         if len(value) > 5:
                             words_str += "..."
-                        self.results_tree.insert(words_item, 'end',
-                                                 text="Слова с максимальным кол-вом",
-                                                 values=(words_str,))
+                        self.results_tree.insert(words_item, 'end', text="Слова с максимальным кол-вом", values=(words_str,))
                     elif key == "unique_count":
-                        self.results_tree.insert(words_item, 'end',
-                                                 text="Уникальных слов",
-                                                 values=(str(value),))
+                        self.results_tree.insert(words_item, 'end', text="Уникальных слов", values=(str(value),))
                     else:
                         self.results_tree.insert(words_item, 'end', text=key, values=(str(value),))
 
 
+    # Сохранение результатов анализа в JSON-файл.
     def save_to_json(self):
         if not self.analyzer or not self.analyzer.stats:
             messagebox.showwarning("Предупреждение", "Сначала выполните анализ")
@@ -321,7 +328,7 @@ class TextAnalyzerGUI:
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при сохранении:\n{str(e)}")
 
-
+    # Очистка всех данных и интерфейса.
     def clear_all(self):
         self.analyzer = None
         self.current_file = None
@@ -337,16 +344,16 @@ class TextAnalyzerGUI:
         self.update_status("Все данные очищены")
 
 
+    # Обновление строки состояния.
     def update_status(self, message):
         self.status_bar.config(text=message)
         self.root.update()
 
-
+    # Запуск главного цикла приложения.
     def run(self):
         self.root.mainloop()
 
-
-# now it should work
+# Запуск приложения
 if __name__ == "__main__":
     app = TextAnalyzerGUI()
     app.run()
