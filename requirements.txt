@@ -1,0 +1,8 @@
+tkinter
+tkinterdnd2
+os
+pathlib
+json
+re
+collections
+typing
