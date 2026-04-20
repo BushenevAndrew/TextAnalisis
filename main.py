@@ -98,6 +98,7 @@ class TextAnalyzerGUI:
         ttk.Radiobutton(filters_frame, text="Все категории", variable=self.filter_var, value="all").pack(anchor='w', padx=5, pady=2)
         ttk.Radiobutton(filters_frame, text="Только буквы", variable=self.filter_var, value="letters").pack(anchor='w', padx=5, pady=2)
         ttk.Radiobutton(filters_frame, text="Только слова", variable=self.filter_var, value="words").pack(anchor='w', padx=5, pady=2)
+        self.filter_var.trace_add('write', self.on_filter_change)
 
         # Правая панель (вкладки с результатами)
         right_notebook = ttk.Notebook(paned)
@@ -121,7 +122,7 @@ class TextAnalyzerGUI:
         text_frame = ttk.Frame(right_notebook)
         right_notebook.add(text_frame, text="📄 Содержимое файла")
 
-        self.text_display = scrolledtext.ScrolledText(text_frame, wrap='word', font=('Courier', 10))
+        self.text_display = scrolledtext.ScrolledText(text_frame, wrap='word', font=('Courier', 10), state='disabled')
         self.text_display.pack(fill='both', expand=True)
 
         # Строка состояния
@@ -160,6 +161,11 @@ class TextAnalyzerGUI:
             return ["words"]  # Анализировать только слова
         return None
 
+    def on_filter_change(self, *args):
+        if self.analyzer and self.analyzer.stats:
+            filters = self.get_active_filters()
+            stats = self.analyzer.analyze(filters=filters)
+            self.display_results(stats)
 
     # Загрузка файла и отображение информации о нём.
     def load_file(self, file_path):
@@ -186,12 +192,15 @@ class TextAnalyzerGUI:
             self.file_info.config(state='disabled')
 
             # Отображаем содержимое файла (первые 5000 символов)
+            self.text_display.config(state='normal')  # Разблокируем перед вставкой
             self.text_display.delete(1.0, tk.END)
             preview_text = self.analyzer.text[:5000]
             self.text_display.insert(1.0, preview_text)
 
             if len(self.analyzer.text) > 5000:
-                self.text_display.insert(tk.END, f"\n\n... (показано только первые 5000 символов из {len(self.analyzer.text)})")
+                self.text_display.insert(tk.END,
+                                         f"\n\n... (показано только первые 5000 символов из {len(self.analyzer.text)})")
+            self.text_display.config(state='disabled')
 
             # Активируем кнопки после загрузки файла
             self.analyze_btn.config(state='normal')
@@ -332,12 +341,20 @@ class TextAnalyzerGUI:
     def clear_all(self):
         self.analyzer = None
         self.current_file = None
+        self.file_info.config(state='normal')
         self.file_info.delete(1.0, tk.END)
-        self.text_display.delete(1.0, tk.END)
+        self.file_info.config(state='disabled')
 
+        # Очищаем содержимое файла
+        self.text_display.config(state='normal')
+        self.text_display.delete(1.0, tk.END)
+        self.text_display.config(state='disabled')
+
+        # Очищаем дерево результатов
         for item in self.results_tree.get_children():
             self.results_tree.delete(item)
 
+        # Отключаем кнопки
         self.analyze_btn.config(state='disabled')
         self.save_btn.config(state='disabled')
         self.filter_var.set("all")
